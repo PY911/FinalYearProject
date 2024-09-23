@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detection System</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s, color 0.3s;
+            animation: fadeIn 1s ease-in-out;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .card {
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .btn-custom {
+            background-color: #4CAF50;
+            color: white;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn-custom:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            display: none;
+            animation: fadeInResult 1s ease-in-out;
+        }
+        .spinner-border {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .progress {
+            margin-top: 20px;
+            display: none;
+        }
+        .form-control:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+        }
+        .icon {
+            color: #4CAF50;
+            margin-right: 5px;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .divider:not(:empty)::before {
+            margin-right: .5em;
+        }
+        .divider:not(:empty)::after {
+            margin-left: .5em;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        @keyframes fadeInResult {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .floating-label {
+            position: relative;
+        }
+        .floating-label input, .floating-label textarea {
+            padding-top: 1.5em;
+        }
+        .floating-label label {
+            position: absolute;
+            top: 0;
+            left: 0.75rem;
+            font-size: 0.85em;
+            padding: 0 0.25rem;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        .floating-label textarea:focus + label,
+        .floating-label textarea:not(:placeholder-shown) + label,
+        .floating-label input:focus + label,
+        .floating-label input:not(:placeholder-shown) + label {
+            font-size: 0.75em;
+            color: #4CAF50;
+            top: -0.5em;
+            background-color: #fff;
+        }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background: linear-gradient(120deg, #202124, #2e2e2e);
+            color: #e0e0e0;
+        }
+        .card.dark-mode {
+            background-color: #2b2b2b;
+            border: 1px solid #4CAF50;
+        }
+        body.dark-mode .btn-custom {
+            background-color: #1a8d1a;
+            color: white;
+        }
+        body.dark-mode .form-control {
+            background-color: #333;
+            color: #fff;
+            border-color: #4CAF50;
+        }
+        body.dark-mode .alert-dark {
+            background-color: #333;
+            color: #fff;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 999;
+            text-align: center;
+            padding-top: 10%;
+            font-size: 2rem;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .card {
+                padding: 20px;
+            }
+        }
+        @media (max-width: 576px) {
+            .btn-custom {
+                font-size: 1em;
+            }
+        }
+
+        /* Icon Button Styles */
+        .icon-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            border-radius: 50%;
+            background-color: transparent;
+            transition: background-color 0.3s;
+        }
+
+        .icon-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Custom class for the "View Detection History" button */
+        .btn-custom-history {
+            background-color: #4CAF50;
+            color: white;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-custom-history:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-end">
+            <!-- Dark mode toggle -->
+            <button id="darkModeToggle" class="btn btn-light icon-button" aria-label="Toggle Dark Mode">
+                <i id="darkModeIcon" class="fas fa-moon"></i>
+            </button>
+
+            <!-- Profile icon button -->
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('profile') }}" class="btn btn-light icon-button ms-2" aria-label="Profile">
+                <i class="fas fa-user"></i>
+            </a>
+
+            <!-- Logout icon button -->
+            <form action="{{ url_for('logout') }}" method="POST">
+                <button class="btn btn-light icon-button ms-2" type="submit" aria-label="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10 col-sm-12">
+                <div class="card">
+                    <h2 class="text-center mb-4"><i class="fas fa-shield-alt icon"></i>Phishing Detection System</h2>
+
+                    <!-- Flash messages for login and error feedback -->
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            <div class="alert alert-warning" role="alert">
+                                {{ messages[0] }}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Form for manual text input -->
+                    <form id="textForm" method="POST" action="/predict" onsubmit="return validateForm('email_text')">
+                        <div class="floating-label mb-3">
+                            <textarea class="form-control" id="email_text" name="email_text" placeholder=" " rows="6" title="Paste or type the email text here."></textarea>
+                            <label for="email_text">Enter Email Text to Classify</label>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-custom" type="submit" id="textSubmit">
+                                <i class="fas fa-check-circle"></i> Check for Phishing
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Divider between forms -->
+                    <div class="divider my-4">OR</div>
+
+                    <!-- Form for file upload -->
+                    <form id="fileForm" method="POST" action="/upload" enctype="multipart/form-data" onsubmit="return validateForm('file')">
+                        <div class="floating-label mb-3">
+                            <input class="form-control" type="file" id="file" name="file" placeholder=" " accept=".txt,.pdf,.doc,.docx" aria-label="Upload file for phishing detection">
+                            <label for="file">Upload a .txt, .pdf, .doc, or .docx File</label>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-custom" type="submit" id="fileSubmit">
+                                <i class="fas fa-upload"></i> Upload and Check for Phishing
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Spinner for loading animation -->
+                    <div class="text-center">
+                        <div class="spinner-border text-success" id="loadingSpinner" role="status" aria-hidden="true">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar for file upload -->
+                    <div class="progress" id="progressBar" aria-label="File upload progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 100%"></div>
+                    </div>
+
+                    <!-- Display the result with Bootstrap alerts -->
+                    <div class="result text-center mt-4" id="resultBox">
+                        {% if prediction_text %}
+                            <div class="alert {% if 'Non-Phishing' in prediction_text %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+                                <i class="fas {% if 'Non-Phishing' in prediction_text %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %}"></i>
+                                {{ prediction_text }}
+                            </div>
+                            <!-- Explanation section in the index.html -->
+                            {% if explanation_text %}
+                                <div class="alert alert-info mt-2" role="alert">
+                                    <strong>Explanation:</strong>
+                                    <p>The email was classified as {{ 'Phishing' if 'Phishing' in prediction_text else 'Non-Phishing' }} with a confidence of {{ confidence }}%.</p>
+                                    <p><strong>Key features influencing this decision:</strong></p>
+                                    <ul class="text-start">
+                                        {% for explanation in explanation_list %}
+                                            <li>{{ explanation }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <p>This email contains {{ 'several indicators of phishing' if 'Phishing' in prediction_text else 'no significant markers of phishing' }}. Always exercise caution.</p>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Form error and success alerts -->
+                    {% if form_error %}
+                        <div class="alert alert-danger mt-3" role="alert">
+                            {{ form_error }}
+                        </div>
+                    {% elif form_success %}
+                        <div class="alert alert-success mt-3" role="alert">
+                            {{ form_success }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Detection History button -->
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('history') }}" class="btn btn-custom-history">
+                            <i class="fas fa-history"></i> View Detection History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay" role="alert" aria-live="assertive">
+        <div>
+            <i class="fas fa-spinner fa-spin"></i> Processing...
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Optional: JS to toggle Dark Mode and maintain state -->
+    <script>
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const darkModeIcon = document.getElementById('darkModeIcon');
+        const body = document.body;
+        const card = document.querySelector('.card');
+
+        // Persist Dark Mode State
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            body.classList.add('dark-mode');
+            card.classList.add('dark-mode');
+            darkModeIcon.classList.remove('fa-moon');
+            darkModeIcon.classList.add('fa-sun');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            card.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+                darkModeIcon.classList.remove('fa-moon');
+                darkModeIcon.classList.add('fa-sun');
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+                darkModeIcon.classList.remove('fa-sun');
+                darkModeIcon.classList.add('fa-moon');
+            }
+        });
+
+        const textForm = document.getElementById('textForm');
+        const spinner = document.getElementById('loadingSpinner');
+        const resultBox = document.getElementById('resultBox');
+
+        textForm.addEventListener('submit', (e) => {
+            spinner.style.display = 'block';
+            document.getElementById('textSubmit').disabled = true;
+        });
+
+        window.addEventListener('load', () => {
+            if (resultBox) {
+                spinner.style.display = 'none';
+                document.getElementById('textSubmit').disabled = false;
+                resultBox.style.display = 'block';
+            }
+        });
+
+        function validateForm(id) {
+            const input = document.getElementById(id);
+
+            if (id === 'file') {
+                const file = input.files[0];
+                if (file && file.size > 5 * 1024 * 1024) {  // 5MB max file size
+                    alert('File size must be under 5MB.');
+                    return false;
+                }
+            }
+
+            if (!input.value.trim()) {
+                alert('Please enter text or upload a file before submitting.');
+                return false;
+            }
+            return true;
+        }
+    </script>
+</body>
+</html>
