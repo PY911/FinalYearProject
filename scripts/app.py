@@ -335,7 +335,7 @@ def upload_file():
             email_text = textract.process(file_path, method='pdftotext').decode('utf-8')
         elif file_ext == 'docx':
             doc = docx.Document(file_path)
-            email_text = '\n.join([para.text for para in doc.paragraphs])'
+            email_text = '\n'.join([para.text for para in doc.paragraphs])
         elif file_ext == 'doc':
             email_text = textract.process(file_path).decode('utf-8')
         else:
