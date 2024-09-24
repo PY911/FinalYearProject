@@ -21,11 +21,11 @@ logging.basicConfig(level=logging.INFO)
 
 # User authentication setup
 app.secret_key = os.getenv('SECRET_KEY', '1234')  # Use environment variable for secret key
+
+# Login Manager
 login_manager = LoginManager()
 login_manager.init_app(app)
-
-# Redirect to login page when not logged in
-login_manager.login_view = 'login'
+login_manager.login_view = 'login'  # Redirect to login page when not logged in
 
 # Serializer for generating secure tokens
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -86,8 +86,8 @@ def clean_input_text(text):
 # Text Preprocessing
 def preprocess_text(text):
     text = text.lower()
-    text = re.sub(r'http\S+', '', text)
-    text = text.translate(str.maketrans('', '', string.punctuation))
+    text = re.sub(r'http\S+', '', text)  # Remove URLs
+    text = text.translate(str.maketrans('', '', string.punctuation))  # Remove punctuation
     words = word_tokenize(text)
     stop_words = set(stopwords.words('english'))
     words = [word for word in words if word not in stop_words]
@@ -117,15 +117,18 @@ def explain_confidence_rf(email_vector, top_n=5):
 
 # Generate detailed explanation text for UI
 def generate_detailed_explanation(prediction, confidence, explanation_list):
-    explanation_text = f"The email was classified as {'Phishing' if prediction else 'Non-Phishing'} with a confidence of {confidence:.2f}%.\n"
-    explanation_text += "Key features influencing this decision:\n"
-    for explanation in explanation_list:
-        explanation_text += f"- {explanation}\n"
-    
-    if prediction:
+    if prediction == 0:  # Non-Phishing case
+        explanation_text = f"The email was classified as Non-Phishing with a confidence of {confidence:.2f}%.\n"
+        explanation_text += "Key features influencing this decision:\n"
+        for explanation in explanation_list:
+            explanation_text += f"- {explanation}\n"
+        explanation_text += "\nThis email does not show significant markers of phishing. It appears safe, but always exercise caution."
+    else:  # Phishing case
+        explanation_text = f"The email was classified as Phishing with a confidence of {confidence:.2f}%.\n"
+        explanation_text += "Key features influencing this decision:\n"
+        for explanation in explanation_list:
+            explanation_text += f"- {explanation}\n"
         explanation_text += "\nThis email contains several indicators of phishing. Avoid interacting with suspicious links or attachments."
-    else:
-        explanation_text += "\nThis email does not show significant markers of phishing, but always exercise caution."
     
     return explanation_text
 
@@ -289,7 +292,7 @@ def predict():
         
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
-            confidence = probabilities.max() * 100
+            confidence = probabilities.max() * 100  # Get the maximum confidence in percentage
         else:
             confidence = "N/A"
 
@@ -308,11 +311,12 @@ def predict():
             conn.commit()
             conn.close()
 
-        return render_template('index.html', prediction_text=prediction_text, explanation_text=detailed_explanation_text, explanation_list=explanation)
+        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, explanation_text=detailed_explanation_text, explanation_list=explanation)
 
     except Exception as e:
         logging.error(f"Error during phishing detection: {e}")
         return render_template('index.html', prediction_text=f"Error: {str(e)}")
+
 
 # File Upload Route
 @app.route('/upload', methods=['POST'])
@@ -331,7 +335,7 @@ def upload_file():
             email_text = textract.process(file_path, method='pdftotext').decode('utf-8')
         elif file_ext == 'docx':
             doc = docx.Document(file_path)
-            email_text = '\n'.join([para.text for para in doc.paragraphs])
+            email_text = '\n.join([para.text for para in doc.paragraphs])'
         elif file_ext == 'doc':
             email_text = textract.process(file_path).decode('utf-8')
         else:

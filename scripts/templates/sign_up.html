@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up | Phishing Detection System</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome for Icons -->
@@ -16,8 +16,7 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            /* Update background to match login page */
-            background: linear-gradient(120deg, #a1f0dc, #a7e2a6);  
+            background: linear-gradient(135deg, #e0f7fa, #81c784);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -56,7 +55,7 @@
             border-radius: 8px;
             height: 50px;
             padding-left: 2rem;
-            padding-right: 1.5rem;
+            padding-right: 40px;  /* Added more space for the icon */
             font-size: 1rem;
             border: 1px solid #4CAF50;
             transition: border-color 0.3s ease;
@@ -78,8 +77,8 @@
 
         .form-floating input:focus + label,
         .form-floating input:not(:placeholder-shown) + label {
-            top: 0;
-            left: 1rem;
+            top: -10px;
+            left: 10px;
             font-size: 0.85rem;
             color: #4CAF50;
         }
@@ -172,7 +171,6 @@
             color: #333;
         }
 
-        /* Styles for the home icon */
         .home-icon {
             color: #4CAF50;
             font-size: 1.5rem;
@@ -185,13 +183,11 @@
             text-decoration: none;
         }
 
-        /* Fade-out transition for smooth page redirect */
         .fade-out {
             opacity: 0;
             transition: opacity 0.5s ease-out;
         }
 
-        /* Form Animation */
         .signup-container {
             animation: fadeIn 1s ease;
         }
@@ -207,21 +203,16 @@
             }
         }
 
-        /* Media queries for responsiveness */
-        @media(max-width: 768px) {
-            .signup-container {
-                width: 300px;
-                padding: 30px;
-            }
-
-            .signup-container h2 {
-                font-size: 1.5rem;
-            }
-
-            .btn-signup {
-                font-size: 1rem;
-            }
+        /* Show password toggle icon */
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #4CAF50;
         }
+
     </style>
 </head>
 <body>
@@ -245,14 +236,18 @@
         <!-- Form action and method updated -->
         <form action="{{ url_for('sign_up') }}" method="POST" id="signupForm">
             <div class="form-floating mb-4">
-                <input type="email" name="email" class="form-control" id="emailInput" placeholder=" " required>
+                <input type="email" name="email" class="form-control" id="emailInput" placeholder=" " aria-label="Email Address" required>
                 <label for="emailInput"><i class="fas fa-envelope me-2"></i>Email</label>
             </div>
-            <div class="form-floating mb-4">
+            <div class="form-floating mb-4 position-relative">
                 <input type="password" name="password" class="form-control" id="passwordInput" placeholder=" " required>
                 <label for="passwordInput"><i class="fas fa-lock me-2"></i>Password</label>
+                <i class="fas fa-eye toggle-password" id="togglePassword"></i>
             </div>
-            <button type="submit" class="btn btn-signup">Sign Up</button>
+            <button type="submit" class="btn btn-signup">
+                <span id="submitText">Sign Up</span>
+                <span id="loader" class="spinner-border spinner-border-sm" style="display: none;"></span>
+            </button>
             <div class="social-btn">
                 <button type="button" class="btn-google">
                     <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" width="20">
@@ -274,18 +269,22 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- JavaScript for smooth transition -->
+    <!-- JavaScript for smooth transition, form validation, show/hide password -->
     <script>
         document.getElementById('signupForm').addEventListener('submit', function(e) {
             e.preventDefault();  // Prevent immediate form submission
+            document.querySelector('.signup-container').classList.add('fade-out');  // Add the fade-out class to trigger the transition
+            setTimeout(function() { e.target.submit(); }, 500);  // Wait for the transition to complete, then submit the form
+        });
 
-            // Add the fade-out class to trigger the transition
-            document.querySelector('.signup-container').classList.add('fade-out');
+        // Show/Hide password
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('passwordInput');
 
-            // Wait for the transition to complete, then submit the form
-            setTimeout(function() {
-                e.target.submit();
-            }, 500);  // Matches CSS transition time
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
         });
     </script>
 

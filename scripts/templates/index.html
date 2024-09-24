@@ -286,7 +286,6 @@
                                 <i class="fas {% if 'Non-Phishing' in prediction_text %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %}"></i>
                                 {{ prediction_text }}
                             </div>
-                            <!-- Explanation section in the index.html -->
                             {% if explanation_text %}
                                 <div class="alert alert-info mt-2" role="alert">
                                     <strong>Explanation:</strong>
@@ -301,6 +300,7 @@
                                 </div>
                             {% endif %}
                         {% endif %}
+
                     </div>
 
                     <!-- Form error and success alerts -->
