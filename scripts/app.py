@@ -80,6 +80,7 @@ VECTORIZER_PATH = os.path.join(os.getcwd(), 'C:/Users/SilasX/Desktop/PhishingDet
 model = joblib.load(MODEL_PATH)
 vectorizer = joblib.load(VECTORIZER_PATH)
 
+# Clean the email text input
 def clean_input_text(text):
     return text.strip()
 
@@ -93,7 +94,7 @@ def preprocess_text(text):
     words = [word for word in words if word not in stop_words]
     return ' '.join(words)
 
-# Enhanced Explanation Function
+# Explanation Function
 def explain_confidence_rf(email_vector, top_n=5):
     try:
         feature_importances = model.feature_importances_
@@ -102,7 +103,7 @@ def explain_confidence_rf(email_vector, top_n=5):
         top_feature_indices = np.argsort(contributions)[-top_n:]
         top_features = [(feature_names[i], contributions[i]) for i in top_feature_indices]
 
-        # Enhanced detailed explanation for each contributing word
+        # Explanation for each contributing word
         detailed_explanation = []
         for feature, weight in top_features:
             if weight > 0:
@@ -256,7 +257,7 @@ def update_password():
         if conn:
             user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
 
-            if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
+            if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
                 if new_password == confirm_password:
                     hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                     conn.execute('UPDATE users SET password = ? WHERE id = ?', (hashed_password, current_user.id))
@@ -278,7 +279,7 @@ def update_password():
 def index():
     return render_template('index.html')
 
-# Predict Phishing Route
+# Predict Phishing Route (Text Input)
 @app.route('/predict', methods=['POST'])
 @login_required
 def predict():
@@ -288,7 +289,7 @@ def predict():
         processed_text = preprocess_text(cleaned_text)
         email_vector = vectorizer.transform([processed_text]).toarray()
 
-        prediction = model.predict(email_vector)
+        prediction = model.predict(email_vector)[0]  # Get the single prediction value
         
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
@@ -299,9 +300,10 @@ def predict():
         explanation = explain_confidence_rf(email_vector, top_n=5)
         detailed_explanation_text = generate_detailed_explanation(prediction, confidence, explanation)
 
-        if prediction == 0:
+        # Synchronize the prediction output and explanation
+        if prediction == 0:  # Non-Phishing case
             prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
-        else:
+        else:  # Phishing case
             prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
 
         conn = get_db_connection()
@@ -317,8 +319,7 @@ def predict():
         logging.error(f"Error during phishing detection: {e}")
         return render_template('index.html', prediction_text=f"Error: {str(e)}")
 
-
-# File Upload Route
+# File Upload and Phishing Detection Route
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload_file():
@@ -345,7 +346,7 @@ def upload_file():
         processed_text = preprocess_text(cleaned_text)
         email_vector = vectorizer.transform([processed_text]).toarray()
 
-        prediction = model.predict(email_vector)
+        prediction = model.predict(email_vector)[0]
 
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
@@ -353,8 +354,9 @@ def upload_file():
         else:
             confidence = "N/A"
 
+        # Generate explanation
         explanation = explain_confidence_rf(email_vector, top_n=5)
-        word_contributions_text = ", ".join(explanation)
+        detailed_explanation_text = generate_detailed_explanation(prediction, confidence, explanation)
 
         if prediction == 0:
             prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
@@ -368,7 +370,9 @@ def upload_file():
             conn.commit()
             conn.close()
 
-        return render_template('index.html', prediction_text=prediction_text, explanation_text=word_contributions_text)
+        # Ensure explanation_text and explanation_list are passed to the template
+        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, 
+                               explanation_text=detailed_explanation_text, explanation_list=explanation)
 
     except Exception as e:
         logging.error(f"Error during file upload: {e}")
