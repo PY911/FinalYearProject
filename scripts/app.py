@@ -94,45 +94,6 @@ def preprocess_text(text):
     words = [word for word in words if word not in stop_words]
     return ' '.join(words)
 
-# Explanation Function
-def explain_confidence_rf(email_vector, top_n=5):
-    try:
-        feature_importances = model.feature_importances_
-        feature_names = vectorizer.get_feature_names_out()
-        contributions = email_vector.flatten() * feature_importances
-        top_feature_indices = np.argsort(contributions)[-top_n:]
-        top_features = [(feature_names[i], contributions[i]) for i in top_feature_indices]
-
-        # Explanation for each contributing word
-        detailed_explanation = []
-        for feature, weight in top_features:
-            if weight > 0:
-                explanation = f"The word '{feature}' contributed positively with a weight of {weight:.4f}, indicating it increases the chances of this email being classified as phishing."
-            else:
-                explanation = f"The word '{feature}' contributed negatively with a weight of {weight:.4f}, indicating it reduces the chances of this email being classified as phishing."
-            detailed_explanation.append(explanation)
-
-        return detailed_explanation
-    except AttributeError:
-        return [("Feature importance not available for this model.", 0)]
-
-# Generate detailed explanation text for UI
-def generate_detailed_explanation(prediction, confidence, explanation_list):
-    if prediction == 0:  # Non-Phishing case
-        explanation_text = f"The email was classified as Non-Phishing with a confidence of {confidence:.2f}%.\n"
-        explanation_text += "Key features influencing this decision:\n"
-        for explanation in explanation_list:
-            explanation_text += f"- {explanation}\n"
-        explanation_text += "\nThis email does not show significant markers of phishing. It appears safe, but always exercise caution."
-    else:  # Phishing case
-        explanation_text = f"The email was classified as Phishing with a confidence of {confidence:.2f}%.\n"
-        explanation_text += "Key features influencing this decision:\n"
-        for explanation in explanation_list:
-            explanation_text += f"- {explanation}\n"
-        explanation_text += "\nThis email contains several indicators of phishing. Avoid interacting with suspicious links or attachments."
-    
-    return explanation_text
-
 # Landing Page Route
 @app.route('/')
 def home():
@@ -293,18 +254,17 @@ def predict():
         
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
-            confidence = probabilities.max() * 100  # Get the maximum confidence in percentage
+            confidence = round(probabilities.max() * 100, 2)  # Get the maximum confidence in percentage
         else:
             confidence = "N/A"
 
-        explanation = explain_confidence_rf(email_vector, top_n=5)
-        detailed_explanation_text = generate_detailed_explanation(prediction, confidence, explanation)
-
-        # Synchronize the prediction output and explanation
+        # Add safety tips based on prediction
         if prediction == 0:  # Non-Phishing case
             prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
+            safety_tip = "This email appears safe. Always remain cautious and verify unexpected requests."
         else:  # Phishing case
             prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
+            safety_tip = "Do not click any links or download attachments. Report this email to your security team."
 
         conn = get_db_connection()
         if conn:
@@ -313,7 +273,7 @@ def predict():
             conn.commit()
             conn.close()
 
-        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, explanation_text=detailed_explanation_text, explanation_list=explanation)
+        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, safety_tip=safety_tip)
 
     except Exception as e:
         logging.error(f"Error during phishing detection: {e}")
@@ -350,18 +310,17 @@ def upload_file():
 
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
-            confidence = probabilities.max() * 100
+            confidence = round(probabilities.max() * 100, 2)
         else:
             confidence = "N/A"
 
-        # Generate explanation
-        explanation = explain_confidence_rf(email_vector, top_n=5)
-        detailed_explanation_text = generate_detailed_explanation(prediction, confidence, explanation)
-
+        # Add safety tips based on prediction
         if prediction == 0:
             prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
+            safety_tip = "This email appears safe. Always remain cautious and verify unexpected requests."
         else:
             prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
+            safety_tip = "Do not click any links or download attachments. Report this email to your security team."
 
         conn = get_db_connection()
         if conn:
@@ -370,9 +329,7 @@ def upload_file():
             conn.commit()
             conn.close()
 
-        # Ensure explanation_text and explanation_list are passed to the template
-        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, 
-                               explanation_text=detailed_explanation_text, explanation_list=explanation)
+        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, safety_tip=safety_tip)
 
     except Exception as e:
         logging.error(f"Error during file upload: {e}")
