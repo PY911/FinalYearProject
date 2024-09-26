@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import bcrypt
-from datetime import datetime
 
 # Function to initialize the database
 def init_db():
@@ -31,8 +30,15 @@ def init_db():
     conn.close()
     print(f"Database initialized successfully at {db_path}.")
 
-# Insert a user into the 'users' table with hashed password and created_at timestamp
+# Function to insert a user into the 'users' table with hashed password and created_at timestamp
 def insert_user(email, password):
+    if len(password) < 8:
+        print("Password must be at least 8 characters long.")
+        return
+    if not any(char.isdigit() for char in password):
+        print("Password must contain at least one number.")
+        return
+    
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -46,7 +52,7 @@ def insert_user(email, password):
         print(f"Error inserting user: {e}")
     conn.close()
 
-# Insert detection history for a user
+# Function to insert detection history for a user
 def insert_detection_history(user_id, email_text, result):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -59,7 +65,7 @@ def insert_detection_history(user_id, email_text, result):
         print(f"Error inserting detection history: {e}")
     conn.close()
 
-# Fetch all detection history for a user
+# Function to fetch all detection history for a user
 def fetch_detection_history(user_id):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -77,7 +83,7 @@ def fetch_detection_history(user_id):
 
     return formatted_history
 
-# Fetch a user by email (for authentication purposes)
+# Function to fetch a user by email (for authentication purposes)
 def fetch_user_by_email(email):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -90,7 +96,7 @@ def fetch_user_by_email(email):
     conn.close()
     return user
 
-# Check if the tables exist in the database
+# Function to check if the tables exist in the database
 def check_table_exists():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()

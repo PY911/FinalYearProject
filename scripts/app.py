@@ -52,11 +52,12 @@ def create_users_table():
     conn = get_db_connection()
     if conn:
         try:
-            # Ensure users table exists
+            # Ensure users table exists with created_at timestamp
             conn.execute('''CREATE TABLE IF NOT EXISTS users (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 email TEXT UNIQUE NOT NULL,
-                                password TEXT NOT NULL
+                                password TEXT NOT NULL,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )''')
             # Ensure detection_history table exists
             conn.execute('''CREATE TABLE IF NOT EXISTS detection_history (
@@ -148,10 +149,11 @@ def sign_up():
                 else:
                     conn.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
                     conn.commit()
-                    flash('Account created successfully. Please login.', 'success')
-                    return redirect(url_for('login'))
+                    flash('Account created successfully. Redirecting to login page...', 'success')
+                    return redirect(url_for('login'))  # Redirect to login after sign-up
             except sqlite3.Error as e:
                 logging.error(f"Error during sign-up: {e}")
+                flash('Error creating account. Please try again.', 'danger')
             finally:
                 conn.close()
     return render_template('sign_up.html')
@@ -216,7 +218,8 @@ def update_password():
 
         conn = get_db_connection()
         if conn:
-            user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
+            user = conn.execute('SELECT email, created_at FROM users WHERE id = ?', (current_user.id,)).fetchone()
+
 
             if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
                 if new_password == confirm_password:
@@ -261,7 +264,7 @@ def predict():
         # Add safety tips based on prediction
         if prediction == 0:  # Non-Phishing case
             prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
-            safety_tip = "This email appears safe. Always remain cautious and verify unexpected requests."
+            safety_tip = "This email appears safe. Always remain cautious and verify unexpected emails."
         else:  # Phishing case
             prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
             safety_tip = "Do not click any links or download attachments. Report this email to your security team."
@@ -366,7 +369,7 @@ def clear_history():
 def profile():
     conn = get_db_connection()
     if conn:
-        user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
+        user = conn.execute('SELECT email, created_at FROM users WHERE id = ?', (current_user.id,)).fetchone()
         phishing_files_checked = conn.execute('SELECT COUNT(*) FROM detection_history WHERE user_id = ?', (current_user.id,)).fetchone()[0]
         conn.close()
 
@@ -380,5 +383,5 @@ def profile():
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    create_users_table()
+    create_users_table()  # Ensure tables are created before the app starts
     app.run(debug=True)

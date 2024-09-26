@@ -274,6 +274,8 @@
         document.getElementById('signupForm').addEventListener('submit', function(e) {
             e.preventDefault();  // Prevent immediate form submission
             document.querySelector('.signup-container').classList.add('fade-out');  // Add the fade-out class to trigger the transition
+            document.getElementById('loader').style.display = 'inline-block';  // Show loader
+            document.getElementById('submitText').style.display = 'none';  // Hide text
             setTimeout(function() { e.target.submit(); }, 500);  // Wait for the transition to complete, then submit the form
         });
 

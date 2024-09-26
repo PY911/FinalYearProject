@@ -200,13 +200,19 @@
             transform: scale(1.05);
         }
 
-        /* Enhanced Security Tips Styling */
+        /* Enhanced Security Tips Styling for Light Mode */
         .security-tips {
-            background: linear-gradient(135deg, #e0f7e9, #c6f3d1);
+            background-color: #e6f4ea;
+            color: #333;
             border-radius: 10px;
             border: 1px solid #4CAF50;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
             transition: background-color 0.3s, color 0.3s;
+        }
+        .security-tips.dark-mode {
+            background-color: #333;
+            color: #e0e0e0;
+            border-color: #4CAF50;
         }
 
         .security-tips h4 {
@@ -380,11 +386,13 @@
         const darkModeIcon = document.getElementById('darkModeIcon');
         const body = document.body;
         const card = document.querySelector('.card');
+        const tips = document.querySelector('.security-tips');
 
         // Persist Dark Mode State
         if (localStorage.getItem('darkMode') === 'enabled') {
             body.classList.add('dark-mode');
             card.classList.add('dark-mode');
+            tips.classList.add('dark-mode');
             darkModeIcon.classList.remove('fa-moon');
             darkModeIcon.classList.add('fa-sun');
         }
@@ -392,6 +400,7 @@
         darkModeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             card.classList.toggle('dark-mode');
+            tips.classList.toggle('dark-mode');
 
             if (body.classList.contains('dark-mode')) {
                 localStorage.setItem('darkMode', 'enabled');

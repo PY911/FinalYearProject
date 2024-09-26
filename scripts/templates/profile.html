@@ -130,7 +130,7 @@
         <!-- Profile Information -->
         <h2>Profile</h2>
         <p><strong>Email:</strong> {{ user['email'] }}</p>
-        <p><strong>Account Created:</strong> {{ user['account_created'] or "N/A" }}</p>
+        <p><strong>Account Created:</strong> {{ user['created_at'] or "N/A" }}</p>
 
         <!-- Phishing Files Checked Count -->
         <div class="phishing-count">
