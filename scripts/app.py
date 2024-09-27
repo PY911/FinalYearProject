@@ -52,12 +52,11 @@ def create_users_table():
     conn = get_db_connection()
     if conn:
         try:
-            # Ensure users table exists with created_at timestamp
+            # Ensure users table exists
             conn.execute('''CREATE TABLE IF NOT EXISTS users (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 email TEXT UNIQUE NOT NULL,
-                                password TEXT NOT NULL,
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                password TEXT NOT NULL
                             )''')
             # Ensure detection_history table exists
             conn.execute('''CREATE TABLE IF NOT EXISTS detection_history (
@@ -94,6 +93,12 @@ def preprocess_text(text):
     stop_words = set(stopwords.words('english'))
     words = [word for word in words if word not in stop_words]
     return ' '.join(words)
+
+# Security Tips Based on Prediction
+security_tips = {
+    0: "This email appears safe. Always remain cautious and verify unexpected emails.",
+    1: "Do not click any links or download attachments. Report this email to your security team."
+}
 
 # Landing Page Route
 @app.route('/')
@@ -149,14 +154,22 @@ def sign_up():
                 else:
                     conn.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
                     conn.commit()
-                    flash('Account created successfully. Redirecting to login page...', 'success')
-                    return redirect(url_for('login'))  # Redirect to login after sign-up
+                    flash('Account created successfully. Redirecting to login...', 'success')
+                    conn.close()
+                    return redirect(url_for('sign_up_confirmation'))  # Redirect to confirmation page
             except sqlite3.Error as e:
                 logging.error(f"Error during sign-up: {e}")
                 flash('Error creating account. Please try again.', 'danger')
             finally:
                 conn.close()
     return render_template('sign_up.html')
+
+# Confirmation route to display success message and auto-redirect
+@app.route('/sign_up_confirmation')
+def sign_up_confirmation():
+    return render_template('sign_up_confirmation.html')
+
+
 
 # Forgot Password Route
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -172,9 +185,13 @@ def forgot_password():
             if not user:
                 flash('Email not found.', 'danger')
             else:
+                # Generate a secure token (for demo purposes, we're using this, but you'd email this link)
                 token = serializer.dumps(email, salt='password-reset')
                 reset_url = url_for('reset_password', token=token, _external=True)
-                flash(f'A password reset link has been sent to your email. (For demo, the link is: {reset_url})', 'info')
+
+                # Flash the clickable link
+                flash(f'A password reset link has been sent to your email. '
+                      f'(For demo, the link is: <a href="{reset_url}">Click here to reset your password</a>)', 'info')
     return render_template('forgot_password.html')
 
 # Reset Password Route
@@ -218,8 +235,7 @@ def update_password():
 
         conn = get_db_connection()
         if conn:
-            user = conn.execute('SELECT email, created_at FROM users WHERE id = ?', (current_user.id,)).fetchone()
-
+            user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
 
             if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
                 if new_password == confirm_password:
@@ -257,26 +273,22 @@ def predict():
         
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
-            confidence = round(probabilities.max() * 100, 2)  # Get the maximum confidence in percentage
+            confidence = probabilities.max() * 100  # Get the maximum confidence percentage
         else:
             confidence = "N/A"
-
-        # Add safety tips based on prediction
-        if prediction == 0:  # Non-Phishing case
-            prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
-            safety_tip = "This email appears safe. Always remain cautious and verify unexpected emails."
-        else:  # Phishing case
-            prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
-            safety_tip = "Do not click any links or download attachments. Report this email to your security team."
 
         conn = get_db_connection()
         if conn:
             conn.execute('INSERT INTO detection_history (user_id, email_text, result) VALUES (?, ?, ?)', 
-                         (current_user.id, email_text, prediction_text))
+                         (current_user.id, email_text, f"{'Phishing' if prediction else 'Non-Phishing'} (Confidence: {confidence:.2f}%)"))
             conn.commit()
             conn.close()
 
-        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, safety_tip=safety_tip)
+        # Render template with prediction and security tips
+        return render_template('index.html', 
+                               prediction_text=f"{'Phishing' if prediction else 'Non-Phishing'} Email (Confidence: {confidence:.2f}%)",
+                               confidence=confidence,
+                               security_tip=security_tips[prediction])
 
     except Exception as e:
         logging.error(f"Error during phishing detection: {e}")
@@ -313,26 +325,21 @@ def upload_file():
 
         if hasattr(model, 'predict_proba'):
             probabilities = model.predict_proba(email_vector)
-            confidence = round(probabilities.max() * 100, 2)
+            confidence = probabilities.max() * 100
         else:
             confidence = "N/A"
-
-        # Add safety tips based on prediction
-        if prediction == 0:
-            prediction_text = f"Non-Phishing Email (Confidence: {confidence:.2f}%)"
-            safety_tip = "This email appears safe. Always remain cautious and verify unexpected requests."
-        else:
-            prediction_text = f"Phishing Email (Confidence: {confidence:.2f}%)"
-            safety_tip = "Do not click any links or download attachments. Report this email to your security team."
 
         conn = get_db_connection()
         if conn:
             conn.execute('INSERT INTO detection_history (user_id, email_text, result) VALUES (?, ?, ?)', 
-                         (current_user.id, email_text, prediction_text))
+                         (current_user.id, email_text, f"{'Phishing' if prediction else 'Non-Phishing'} (Confidence: {confidence:.2f}%)"))
             conn.commit()
             conn.close()
 
-        return render_template('index.html', prediction_text=prediction_text, confidence=confidence, safety_tip=safety_tip)
+        return render_template('index.html', 
+                               prediction_text=f"{'Phishing' if prediction else 'Non-Phishing'} Email (Confidence: {confidence:.2f}%)",
+                               confidence=confidence,
+                               security_tip=security_tips[prediction])
 
     except Exception as e:
         logging.error(f"Error during file upload: {e}")
@@ -369,7 +376,7 @@ def clear_history():
 def profile():
     conn = get_db_connection()
     if conn:
-        user = conn.execute('SELECT email, created_at FROM users WHERE id = ?', (current_user.id,)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
         phishing_files_checked = conn.execute('SELECT COUNT(*) FROM detection_history WHERE user_id = ?', (current_user.id,)).fetchone()[0]
         conn.close()
 
@@ -383,5 +390,5 @@ def profile():
         return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    create_users_table()  # Ensure tables are created before the app starts
+    create_users_table()
     app.run(debug=True)

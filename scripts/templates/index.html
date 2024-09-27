@@ -331,21 +331,10 @@
 
                             <!-- Safety Tip Alert -->
                             <div class="alert alert-info mt-2" role="alert">
-                                <i class="fas fa-info-circle"></i> {{ safety_tip }}
+                                <i class="fas fa-info-circle"></i> {{ security_tip }}
                             </div>
                         {% endif %}
                     </div>
-
-                    <!-- Form error and success alerts -->
-                    {% if form_error %}
-                        <div class="alert alert-danger mt-3" role="alert">
-                            {{ form_error }}
-                        </div>
-                    {% elif form_success %}
-                        <div class="alert alert-success mt-3" role="alert">
-                            {{ form_success }}
-                        </div>
-                    {% endif %}
 
                     <!-- Detection History button -->
                     <div class="d-grid gap-2">
