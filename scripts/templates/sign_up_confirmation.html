@@ -46,11 +46,11 @@
     <h2>Account Created Successfully!</h2>
     <p>You will be redirected to the login page in a few seconds...</p>
 
-    <!-- Auto-redirect after 4 seconds -->
+    <!-- Auto-redirect after 3 seconds -->
     <script>
         setTimeout(function() {
             window.location.href = "{{ url_for('login') }}";
-        }, 4000);  // Wait for 4 seconds before redirecting
+        }, 3000);  // Wait for 3 seconds before redirecting
     </script>
 </div>
 
