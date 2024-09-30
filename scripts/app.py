@@ -126,7 +126,8 @@ def login():
                 login_user(user_obj)
                 flash('Successfully logged in.', 'success')
                 return redirect(url_for('index'))
-            flash('Invalid email or password.', 'danger')
+            else:
+                flash('Incorrect email or password. Please try again.', 'danger')  # Flash the error message
     return render_template('login.html')
 
 # Logout Route
@@ -214,13 +215,13 @@ def reset_password(token):
         hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
 
         conn = get_db_connection()
-        if conn:
-            conn.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
-            conn.commit()
-            conn.close()
+        conn.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
+        conn.commit()
+        conn.close()
 
-            flash('Password reset successful. Please login.', 'success')
-            return redirect(url_for('login'))
+        # Render reset_password template with success message instead of redirecting to the index
+        flash('Password reset successful. Please login.', 'success')
+        return render_template('reset_password.html', success=True, token=token)
 
     return render_template('reset_password.html', token=token)
 
@@ -237,7 +238,7 @@ def update_password():
         if conn:
             user = conn.execute('SELECT * FROM users WHERE id = ?', (current_user.id,)).fetchone()
 
-            if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
+            if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):  # Remove .encode if password is already in bytes
                 if new_password == confirm_password:
                     hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                     conn.execute('UPDATE users SET password = ? WHERE id = ?', (hashed_password, current_user.id))
