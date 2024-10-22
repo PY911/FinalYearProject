@@ -155,7 +155,7 @@ def sign_up():
                 else:
                     conn.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
                     conn.commit()
-                    flash('Account created successfully. Redirecting to login...', 'success')
+                    flash('Account created successfully.', 'success')
                     conn.close()
                     return redirect(url_for('sign_up_confirmation'))  # Redirect to confirmation page
             except sqlite3.Error as e:
